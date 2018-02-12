@@ -1,0 +1,2 @@
+prototype of a logger of changes to data protected by FTI.
+The implementation works with page protection and signal handling.
