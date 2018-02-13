@@ -4,6 +4,7 @@ addr_t PAGE_SIZE;
 addr_t PAGE_MASK;
 const int UINT64 = sizeof(uint64_t); 
 struct sigaction sa;
+struct sigaction sa_old;
 prot_vec prot_data;
 d_page_vec dirty_pages;
 
@@ -14,10 +15,10 @@ void init() {
     addr_t tail = (addr_t)0x1;
     for(; tail!=PAGE_SIZE; PAGE_MASK<<=1, tail<<=1);
     // register signal handler
-    sa.sa_flags = SA_SIGINFO;
+    sa.sa_flags = SA_SIGINFO|SA_NODEFER;
     sigemptyset(&sa.sa_mask);
     sa.sa_sigaction = handler;
-    sigaction(SIGSEGV, &sa, NULL);
+    sigaction(SIGSEGV, &sa, &sa_old);
     prot_data.prot_vars = NULL;
     prot_data.count = 0;
     dirty_pages.addr_vec = (addr_pt*) NULL;
@@ -93,8 +94,9 @@ void handler(int signum, siginfo_t* info, void* ucontext) {
             dirty_pages.addr_vec = (addr_pt*) realloc(dirty_pages.addr_vec, (++(dirty_pages.count))*sizeof(addr_pt));
             dirty_pages.addr_vec[dirty_pages.count - 1] = (addr_pt)((addr_t)info->si_addr & PAGE_MASK);
         } else {
-            sa.sa_handler = SIG_DFL;
-            sigaction(SIGSEGV, &sa, NULL);
+            sigaction(SIGSEGV, &sa_old, NULL);
+            raise(SIGSEGV);
+            sigaction(SIGSEGV, &sa, &sa_old);
         }
     }
 }
